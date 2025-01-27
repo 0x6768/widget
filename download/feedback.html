@@ -1,0 +1,31 @@
+<link rel="stylesheet" href="https://s4.zstatic.net/ajax/libs/mdui/1.0.2/css/mdui.min.css" />
+<script src="https://s4.zstatic.net/ajax/libs/mdui/1.0.2/js/mdui.min.js"></script>
+<div class="mdui-container">
+  <div class="mdui-row">
+    <div class="mdui-col-xs-12 mdui-col-sm-8 mdui-col-md-6">
+      <div class="mdui-card">
+        <div class="mdui-card-header">
+          <div class="mdui-card-header-title">Feedback</div>
+          <div class="mdui-card-header-subtitle">Please leave your feedback</div>
+          <button class="mdui-btn mdui-ripple mdui-float-right" onclick="feedback('github')">通过GITHUB反馈</button>
+          <button class="mdui-btn mdui-ripple mdui-float-right" onclick="feedback('tencent')">通过腾讯文档反馈</button>
+        </div>
+        <script>
+          function getUrlParameter(name) {
+            name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+            var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+            var results = regex.exec(location.search);
+            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+        }
+            function feedback(method) {
+            if (method === 'github') {
+                const url = `https://github.com/0x6768/widget/issues/new?title=网盘链接失效&body=文件ID:${getUrlParameter('id')}&labels=bug`;
+                window.open(url, '_blank');
+            } else if (method === 'tencent') {
+                const url = `https://docs.qq.com/form/page/DTExZbk5WUEx3VVRI`;
+                window.open(url, '_blank');
+            } else {
+                mdui.snackbar('未选择反馈方式');
+            }
+        }
+        </script>

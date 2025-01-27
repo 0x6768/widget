@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>下载</title>
+    <link rel="stylesheet" href="https://s4.zstatic.net/ajax/libs/mdui/1.0.2/css/mdui.min.css" />
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .file-info {
+            margin-bottom: 10px;
+        }
+        .file-info p {
+            margin: 5px 0;
+        }
+        .clickable {
+            color: #007BFF;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .clickable:hover {
+            text-decoration: underline;
+        }
+        .alert-message {
+            text-align: center;
+            color: green;
+            margin-top: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>下载信息</h1>
+    <div class="container mdui-card">
+        <div class="mdui-card-content" id="file-info">
+            <div class="file-info">
+                <p><strong>文件名:</strong> <span id="file-name"></span></p>
+                <p><strong>密码:</strong> <span id="file-pwd" class="clickable" onclick="copyToClipboard(document.getElementById('file-pwd').innerText)"></span>
+                   <button class="mdui-btn mdui-ripple" onclick="copyToClipboard(document.getElementById('file-pwd').innerText)">复制</button>
+                </p>
+                <p><strong>大小:</strong> <span id="file-size"></span></p>
+            </div>
+        </div>
+        <div class="mdui-card-actions">
+            <button id="download-btn" class="mdui-btn mdui-btn-raised mdui-ripple mdui-color-theme-accent" onclick="openUrl()">下载</button>
+            <a id="feedback" href='feedback.html' class="mdui-btn mdui-ripple">反馈</a>
+            <p>免责声明：本站提供的下载服务由用户自行承担风险，下载后由用户自行承担因下载而产生的法律责任。</p>
+           <script>
+             
+           </script>
+        </div>
+    </div>
+ 
+    <script src="https://s4.zstatic.net/ajax/libs/mdui/1.0.2/js/mdui.min.js"></script>
+    <script>
+        function copyToClipboard(text) {
+            var textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            mdui.snackbar("密码已复制到剪贴板");
+        }
+
+        function openUrl() {
+            const url = document.getElementById('download-btn').getAttribute('data-url');
+            if (url) {
+                window.open(url, '_blank');
+            } else {
+                mdui.snackbar('URL未找到');
+            }
+        }
+
+        function loadFileInfo() {
+            // 从静态 JSON 文件中加载文件信息
+            fetch('data.json')
+                .then(response => response.json())
+                .then(data => {
+                    const file = data.file.find(f => f.id === parseInt(getUrlParameter('id')));
+                    if (file) {
+                        document.getElementById('file-name').innerText = file.name;
+                        document.getElementById('download-btn').setAttribute('data-url', file.url);
+                        document.getElementById('file-pwd').innerText = file.pwd;
+                        document.getElementById('file-size').innerText = file.size;
+                    } else {
+                        document.getElementById('file-info').innerHTML = '<p>未找到指定的文件信息。</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('获取文件信息失败:', error);
+                    document.getElementById('file-info').innerHTML = '<p>无法加载文件信息。</p>';
+                    document.getElementById('download-btn').style.display = 'none';
+                });
+        }
+
+        function getUrlParameter(name) {
+            name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+            var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+            var results = regex.exec(location.search);
+            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+        }
+        var getid = getUrlParameter('id');
+             url = `feedback.html?id=${getid}`;
+             document.getElementById('feedback').href = url;
+    
+
+        // 加载文件信息
+        loadFileInfo();
+    </script>
+</body>
+</html>

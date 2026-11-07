@@ -1,0 +1,95 @@
+name: Gen Files and Upload to Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      sizes:
+        description: "文件大小列表，单位 MB，逗号分隔，例如 128,256,0.5"
+        required: true
+        default: "128,256"
+      tag:
+        description: "Release tag"
+        required: true
+        default: "v1.0.0"
+
+permissions:
+  contents: write
+
+jobs:
+  gen-and-upload:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate and upload
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const os = require('os');
+
+            const owner = context.repo.owner;
+            const repo  = context.repo.repo;
+            const tag   = context.payload.inputs.tag || 'v1.0.0';
+            const raw   = context.payload.inputs.sizes || '128,256';
+
+            const sizes = raw.split(',')
+              .map(s => s.trim())
+              .filter(Boolean)
+              .map(s => {
+                const v = Number(s);
+                if (!Number.isFinite(v) || v <= 0) throw new Error(`非法大小: ${s}`);
+                return v;
+              });
+            if (!sizes.length) throw new Error('没有有效大小');
+
+            let rel;
+            try {
+              rel = (await github.rest.repos.getReleaseByTag({ owner, repo, tag })).data;
+              core.info(`Release 已存在: ${rel.id}`);
+            } catch (e) {
+              if (e.status !== 404) throw e;
+              rel = (await github.rest.repos.createRelease({
+                owner, repo, tag_name: tag, name: tag,
+              })).data;
+              core.info(`Release 已创建: ${rel.id}`);
+            }
+
+            const RAND = 65536;
+            for (const mb of sizes) {
+              const bytes = Math.round(mb * 1024 * 1024);
+              const name  = `${String(mb).replace('.', '_')}MB.bin`;
+              const tmp   = path.join(os.tmpdir(), name);
+
+              const fd = fs.openSync(tmp, 'w');
+              let written = 0;
+              while (written < bytes) {
+                const n = Math.min(RAND, bytes - written);
+                fs.writeSync(fd, Buffer.from(crypto.getRandomValues(new Uint8Array(n))));
+                written += n;
+              }
+              fs.closeSync(fd);
+              core.info(`生成 ${name} (${bytes} bytes)`);
+
+              const assets = (await github.rest.repos.listReleaseAssets({
+                owner, repo, release_id: rel.id, per_page: 100,
+              })).data;
+              for (const a of assets) {
+                if (a.name === name) {
+                  core.info(`删除旧 asset: ${a.name} (${a.id})`);
+                  await github.rest.repos.deleteReleaseAsset({ owner, repo, asset_id: a.id });
+                }
+              }
+
+              const data = fs.readFileSync(tmp);
+              const res = await github.rest.repos.uploadReleaseAsset({
+                owner, repo, release_id: rel.id,
+                name,
+                headers: {
+                  'content-type': 'application/octet-stream',
+                  'content-length': data.length,
+                },
+                data,
+              });
+              core.info(`上传完成: ${res.data.browser_download_url}`);
+              fs.unlinkSync(tmp);
+            }
